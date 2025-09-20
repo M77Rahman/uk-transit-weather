@@ -6,14 +6,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  etl:
+  test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: src
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
       - run: pip install -r requirements.txt
-      - run: python -m src.etl.run_etl
+      - run: pytest -q
+
+  etl:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Run ETL
+        run: python -m src.etl.run_etl
         env:
           TFL_APP_KEY: ${{ secrets.TFL_APP_KEY }}
+      - name: Upload DuckDB (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: duckdb
+          path: data/uk_transit_weather.duckdb
+          if-no-files-found: ignore
