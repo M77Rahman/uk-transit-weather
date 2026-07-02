@@ -1,12 +1,15 @@
 import logging
+
 from dotenv import load_dotenv
+
+from .load import append_df, get_conn, upsert_df
 from .tfl_client import get_line_status
-from .weather_client import get_hourly_weather
 from .transform import normalize_line_status, normalize_weather_hourly
-from .load import get_conn, append_df, upsert_df
+from .weather_client import get_hourly_weather
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("etl")
+
 
 def run_status(conn):
     """Fetch and load the TfL line status snapshot. Returns rows loaded, or None on failure."""
@@ -20,6 +23,7 @@ def run_status(conn):
         log.exception("TfL line status fetch/load failed; continuing with other sources")
         return None
 
+
 def run_weather(conn):
     """Fetch and load hourly weather. Returns rows loaded, or None on failure."""
     try:
@@ -32,6 +36,7 @@ def run_weather(conn):
         log.exception("Weather fetch/load failed; continuing with other sources")
         return None
 
+
 def main():
     load_dotenv()
     conn = get_conn()
@@ -41,6 +46,7 @@ def main():
 
     if status_rows is None and weather_rows is None:
         raise SystemExit("[ETL] both sources failed; see log above")
+
 
 if __name__ == "__main__":
     main()

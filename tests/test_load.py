@@ -17,22 +17,29 @@ def test_append_df_accumulates_rows():
 
 def test_upsert_df_replaces_rows_with_matching_key():
     conn = duckdb.connect(":memory:")
-    first = pd.DataFrame({
-        "time": pd.to_datetime(["2025-01-01T00:00", "2025-01-01T01:00"]),
-        "temperature_c": [1.0, 2.0],
-    })
+    first = pd.DataFrame(
+        {
+            "time": pd.to_datetime(["2025-01-01T00:00", "2025-01-01T01:00"]),
+            "temperature_c": [1.0, 2.0],
+        }
+    )
     upsert_df(conn, first, "fact_weather_hourly", key_cols=["time"])
 
     # Second run overlaps one hour (forecast re-fetched) and adds a new one.
-    second = pd.DataFrame({
-        "time": pd.to_datetime(["2025-01-01T01:00", "2025-01-01T02:00"]),
-        "temperature_c": [99.0, 3.0],
-    })
+    second = pd.DataFrame(
+        {
+            "time": pd.to_datetime(["2025-01-01T01:00", "2025-01-01T02:00"]),
+            "temperature_c": [99.0, 3.0],
+        }
+    )
     upsert_df(conn, second, "fact_weather_hourly", key_cols=["time"])
 
     result = conn.execute("select time, temperature_c from fact_weather_hourly order by time").df()
     assert len(result) == 3
-    assert result.loc[result["time"] == pd.Timestamp("2025-01-01T01:00"), "temperature_c"].iloc[0] == 99.0
+    assert (
+        result.loc[result["time"] == pd.Timestamp("2025-01-01T01:00"), "temperature_c"].iloc[0]
+        == 99.0
+    )
 
 
 def test_upsert_df_empty_is_noop():

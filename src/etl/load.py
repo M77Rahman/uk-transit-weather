@@ -1,10 +1,14 @@
-import duckdb, os
+import os
+
+import duckdb
 
 DB_PATH = os.getenv("DB_PATH", "data/uk_transit_weather.duckdb")
+
 
 def get_conn():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     return duckdb.connect(DB_PATH)
+
 
 def append_df(conn, df, table):
     """Append rows as-is. Use for append-only event logs (e.g. status snapshots)."""
@@ -15,6 +19,7 @@ def append_df(conn, df, table):
     conn.execute(f"INSERT INTO {table} SELECT * FROM df")
     conn.unregister("df")
     return len(df)
+
 
 def upsert_df(conn, df, table, key_cols):
     """Insert rows, replacing any existing rows with matching key_cols.

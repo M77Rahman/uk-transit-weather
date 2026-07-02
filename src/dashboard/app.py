@@ -1,15 +1,16 @@
 import os
+
 import duckdb
 import streamlit as st
 from dotenv import load_dotenv
 
 try:
     # Package-relative import (when imported as src.dashboard.app, e.g. from tests).
-    from .queries import latest_status, recent_weather, disruption_vs_weather
+    from .queries import disruption_vs_weather, latest_status, recent_weather
 except ImportError:
     # `streamlit run src/dashboard/app.py` executes this file as a standalone
     # script with no parent package, so fall back to a sibling-module import.
-    from queries import latest_status, recent_weather, disruption_vs_weather
+    from queries import disruption_vs_weather, latest_status, recent_weather
 
 load_dotenv()
 DB_PATH = os.getenv("DB_PATH", "data/uk_transit_weather.duckdb")
@@ -55,7 +56,9 @@ if not os.path.exists(DB_PATH):
 
 with st.sidebar:
     st.header("Filters")
-    days = st.select_slider("Weather / correlation window (days)", options=[1, 3, 7, 14, 30], value=7)
+    days = st.select_slider(
+        "Weather / correlation window (days)", options=[1, 3, 7, 14, 30], value=7
+    )
     if st.button("Refresh data"):
         st.cache_data.clear()
         st.rerun()
@@ -81,7 +84,9 @@ with tab_transit:
         col2.metric("Disrupted", disrupted)
 
         display = filtered.copy()
-        display["status"] = display["status_severity"].apply(status_badge) + " " + display["status_description"]
+        display["status"] = (
+            display["status_severity"].apply(status_badge) + " " + display["status_description"]
+        )
         st.dataframe(
             display[["line_id", "status", "as_of"]],
             width="stretch",

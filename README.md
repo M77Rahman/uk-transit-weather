@@ -121,3 +121,21 @@ Run the test suite with:
 ```bash
 PYTHONPATH=src pytest -q
 ```
+
+---
+
+## Development
+
+Lint/format and pre-commit hooks use [ruff](https://docs.astral.sh/ruff/):
+
+```bash
+pip install -r requirements-dev.txt
+pre-commit install       # runs ruff on every commit
+
+ruff check .             # lint
+ruff format .            # format
+```
+
+CI (`.github/workflows/ci.yml`) runs lint and tests on every push/PR to `main`.
+The scheduled data pipeline (`.github/workflows/etl.yml`) runs independently on
+its own hourly cron.
