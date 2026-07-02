@@ -56,13 +56,17 @@ Basic checks are applied to improve reliability and reduce the chance of poor-qu
 Examples include:
 - missing value checks
 - consistency checks
-- handling failed or incomplete API responses
+- handling failed or incomplete API responses (each source runs independently — a TfL
+  outage doesn't stop the weather load, and vice versa)
 
 ### 4. Load
 The cleaned data is stored in **DuckDB** for structured querying and dashboard use.
+Weather rows are upserted (keyed on `time`) so re-running the pipeline against the
+Open-Meteo forecast window doesn't create duplicate hourly rows.
 
 ### 5. Present
-A **Streamlit dashboard** displays the processed outputs in a user-friendly way.
+A **Streamlit dashboard** displays the processed outputs, including a view that
+correlates hourly transit disruption with rainfall.
 
 ### 6. Automate
 The workflow is scheduled through **GitHub Actions** so it can run on a repeatable basis.
@@ -87,8 +91,33 @@ The workflow is scheduled through **GitHub Actions** so it can run on a repeatab
 uk-transit-weather/
 │
 ├── .github/workflows/      # Scheduled GitHub Actions workflow
-├── src/                    # Pipeline and application source code
+├── src/
+│   ├── etl/                # Extract, transform, load
+│   └── dashboard/          # Streamlit app + query layer
 ├── tests/                  # Test files
 ├── .env.example            # Example environment variables
 ├── requirements.txt        # Project dependencies
 └── README.md               # Project documentation
+```
+
+---
+
+## Running Locally
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # add your TfL app key
+
+# Run the pipeline once (fetches + loads data into DuckDB)
+python -m src.etl.run_etl
+
+# Launch the dashboard
+streamlit run src/dashboard/app.py
+```
+
+Run the test suite with:
+
+```bash
+PYTHONPATH=src pytest -q
+```
