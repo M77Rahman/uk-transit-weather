@@ -2,12 +2,19 @@ name: ETL
 on:
   schedule:
     - cron: "5 * * * *"      # hourly
-    - cron: "17 5 * * *"     # daily
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etl
+  cancel-in-progress: false
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       PYTHONPATH: src
     steps:
@@ -22,8 +29,10 @@ jobs:
   etl:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       PYTHONPATH: src
+      DB_PATH: data/uk_transit_weather.duckdb
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,13 +40,29 @@ jobs:
           python-version: "3.11"
           cache: "pip"
       - run: pip install -r requirements.txt
+
+      # The runner's filesystem doesn't survive between scheduled runs, so
+      # without this step every run would start from an empty DuckDB file
+      # and history would never accumulate. Restore-keys falls back to the
+      # most recent cache entry; the exact `key` (unique per run) always
+      # misses on restore, which forces a fresh save at the end of the job.
+      - name: Restore DuckDB from previous run
+        uses: actions/cache@v4
+        with:
+          path: data/uk_transit_weather.duckdb
+          key: duckdb-v1-${{ github.run_id }}
+          restore-keys: |
+            duckdb-v1-
+
       - name: Run ETL
         run: python -m src.etl.run_etl
         env:
           TFL_APP_KEY: ${{ secrets.TFL_APP_KEY }}
-      - name: Upload DuckDB (artifact)
+
+      - name: Upload DuckDB (artifact, for manual inspection)
         uses: actions/upload-artifact@v4
         with:
           name: duckdb
           path: data/uk_transit_weather.duckdb
           if-no-files-found: ignore
+          retention-days: 7
